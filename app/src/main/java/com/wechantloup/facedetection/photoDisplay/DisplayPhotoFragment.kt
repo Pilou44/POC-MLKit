@@ -1,6 +1,5 @@
 package com.wechantloup.facedetection.photoDisplay
 
-import android.graphics.Color
 import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
@@ -87,6 +86,7 @@ class DisplayPhotoFragment : Fragment() {
     private fun Face.analyze(photo: Photo) {
         val binding = binding ?: return
         val bounds = boundingBox
+        val face = this
 
         binding.ivPhoto.post {
             val factor = binding.ivPhoto.getFactor(photo)
@@ -100,10 +100,9 @@ class DisplayPhotoFragment : Fragment() {
                 bounds.bottom * factor,
             )
             binding.root.apply {
-                val view = View(requireContext())
-                view.setBackgroundColor(Color.BLUE)
-                view.alpha = 0.3f
+                val view = FaceAnalyzeOverlay(requireContext())
                 addView(view)
+                view.bind(face)
                 val lp = view.layoutParams as FrameLayout.LayoutParams
                 lp.width = updatedBounds.width().toInt()
                 lp.height = updatedBounds.height().toInt()
