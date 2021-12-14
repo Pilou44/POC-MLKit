@@ -99,21 +99,20 @@ class DisplayPhotoFragment : Fragment() {
                 bounds.right * factor,
                 bounds.bottom * factor,
             )
-            binding.root.apply {
-                val view = FaceAnalyzeOverlay(requireContext())
-                addView(view)
-                view.bind(face)
-                val lp = view.layoutParams as FrameLayout.LayoutParams
-                lp.width = updatedBounds.width().toInt()
-                lp.height = updatedBounds.height().toInt()
-                lp.setMargins(
-                    updatedBounds.left.toInt() + imageHorizontalOffset,
-                    updatedBounds.top.toInt() + imageVerticalOffset,
-                    0,
-                    0,
-                )
-                view.layoutParams = lp
-            }
+
+            val view = FaceAnalyzeOverlay(requireContext())
+            binding.imageContainer.addView(view)
+            view.bind(face)
+            val lp = view.layoutParams as FrameLayout.LayoutParams
+            lp.width = updatedBounds.width().toInt()
+            lp.height = updatedBounds.height().toInt()
+            lp.setMargins(
+                updatedBounds.left.toInt() + imageHorizontalOffset,
+                updatedBounds.top.toInt() + imageVerticalOffset,
+                0,
+                0,
+            )
+            view.layoutParams = lp
         }
 
 //        Log.i("DisplayPhotoFragment", "Position: $bounds")
