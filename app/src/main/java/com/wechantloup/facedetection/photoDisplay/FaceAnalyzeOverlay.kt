@@ -16,6 +16,11 @@ class FaceAnalyzeOverlay @JvmOverloads constructor(
     private val binding = FaceAnalyzeOverlayLayoutBinding.inflate(LayoutInflater.from(context), this, true)
 
     fun bind(face: Face) {
-        binding.leftEye.text = "${face.leftEyeOpenProbability * 100}%"
+        val leftEyeValue = "${((face.leftEyeOpenProbability ?: 0f) * 100).toInt()}%"
+        val rightEyeValue = "${((face.rightEyeOpenProbability ?: 0f) * 100).toInt()}%"
+        val smile = "${((face.smilingProbability ?: 0f) * 100).toInt()}%"
+        binding.leftEye.text = leftEyeValue
+        binding.rightEye.text = rightEyeValue
+        binding.smile.text = smile
     }
 }
