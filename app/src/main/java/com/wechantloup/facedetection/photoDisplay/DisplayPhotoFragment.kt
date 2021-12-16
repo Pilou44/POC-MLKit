@@ -1,5 +1,6 @@
 package com.wechantloup.facedetection.photoDisplay
 
+import android.graphics.Matrix
 import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
@@ -9,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.appcompat.widget.AppCompatImageView
+import androidx.core.view.children
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -17,6 +19,8 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.Face
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.otaliastudios.zoom.ZoomEngine
+import com.otaliastudios.zoom.ZoomLayout
 import com.wechantloup.facedetection.GalleryActivity
 import com.wechantloup.facedetection.GalleryViewModel
 import com.wechantloup.facedetection.databinding.FragmentDisplayPhotoBinding
@@ -40,11 +44,57 @@ class DisplayPhotoFragment : Fragment() {
         viewModel = (activity as GalleryActivity?)?.viewModel
 
         subscribeToUpdates()
+
+        (binding?.zoomLayout as ZoomLayout).engine.addListener(
+            object: ZoomEngine.Listener {
+                override fun onIdle(engine: ZoomEngine) {
+                    checkVisibleFaces()
+                }
+
+                override fun onUpdate(engine: ZoomEngine, matrix: Matrix) {
+                    // Nothing to do
+                }
+            }
+        )
     }
 
     override fun onDestroyView() {
         binding = null
         super.onDestroyView()
+    }
+
+    private fun checkVisibleFaces() {
+        val binding = binding ?: return
+        val engine = binding.zoomLayout.engine
+        val faces = binding.imageContainer.children.toList().filterIsInstance<FaceAnalyzeOverlay>()
+
+        var info = "${faces.size} faces detected"
+
+        val imageFactor = binding.ivPhoto.width.toFloat() / engine.computeHorizontalScrollRange().toFloat()
+
+        var hStart = engine.computeHorizontalScrollOffset()
+        if (hStart < 0) hStart = 0
+        val hEnd = hStart + binding.zoomLayout.width
+        var vStart = engine.computeVerticalScrollOffset()
+        if (vStart < 0) vStart = 0
+        val vEnd = vStart + binding.zoomLayout.height
+
+        faces.forEachIndexed { index, face ->
+            val faceTop = (face.top / imageFactor).toInt()
+            val faceLeft = (face.left / imageFactor).toInt()
+            val faceRight = (face.right / imageFactor).toInt()
+            val faceBottom = (face.bottom / imageFactor).toInt()
+            val isTopLeftVisible = faceTop in vStart until vEnd && faceLeft in hStart until hEnd
+            val isBottomRightVisible = faceBottom in vStart until vEnd && faceRight in hStart until hEnd
+
+            info += when {
+                isTopLeftVisible && isBottomRightVisible -> "\nFace $index is totally visible"
+                isTopLeftVisible || isBottomRightVisible -> "\nFace $index is partially visible"
+                else -> "\nFace $index is not visible"
+            }
+        }
+
+        binding.tvInfo.text = info
     }
 
     private fun subscribeToUpdates() {
@@ -74,6 +124,9 @@ class DisplayPhotoFragment : Fragment() {
                 .addOnSuccessListener { faces ->
                     Log.i("DisplayPhotoFragment", "${faces.size} faces detected")
                     faces.forEach { it.analyze(photo) }
+                    binding?.imageContainer?.children?.last()?.post {
+                        checkVisibleFaces()
+                    }
                 }
                 .addOnFailureListener { e ->
                     Log.e("DisplayPhotoFragment", "Error on detecting faces", e)
@@ -114,11 +167,6 @@ class DisplayPhotoFragment : Fragment() {
             )
             view.layoutParams = lp
         }
-
-//        Log.i("DisplayPhotoFragment", "Position: $bounds")
-//        Log.i("DisplayPhotoFragment", "Smiling probability: $smilingProbability")
-//        Log.i("DisplayPhotoFragment", "Left eye opened: $leftEyeOpenProbability")
-//        Log.i("DisplayPhotoFragment", "Right eye opened: $rightEyeOpenProbability")
     }
 
     private fun AppCompatImageView.getFactor(photo: Photo): Float {
