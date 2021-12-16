@@ -32,8 +32,8 @@ import java.io.IOException
 class DisplayPhotoFragment : Fragment() {
 
     private var binding: FragmentDisplayPhotoBinding? = null
-
     private var viewModel: GalleryViewModel? = null
+    private var processTime: Long = 0
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentDisplayPhotoBinding.inflate(layoutInflater)
@@ -68,7 +68,7 @@ class DisplayPhotoFragment : Fragment() {
         val engine = binding.zoomLayout.engine
         val faces = binding.imageContainer.children.toList().filterIsInstance<FaceAnalyzeOverlay>()
 
-        var info = "${faces.size} faces detected"
+        var info = "Process duration: $processTime ms\n${faces.size} faces detected"
 
         val imageFactor = binding.ivPhoto.width.toFloat() / engine.computeHorizontalScrollRange().toFloat()
 
@@ -113,6 +113,7 @@ class DisplayPhotoFragment : Fragment() {
 
     private fun detectFaces(photo: Photo) {
         try {
+            val startTime = System.currentTimeMillis()
             val image = InputImage.fromFilePath(requireContext(), Uri.parse(photo.uri))
             val options = FaceDetectorOptions.Builder()
                 .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
@@ -122,6 +123,8 @@ class DisplayPhotoFragment : Fragment() {
             val detector = FaceDetection.getClient(options)
             detector.process(image)
                 .addOnSuccessListener { faces ->
+                    val endTime = System.currentTimeMillis()
+                    processTime = endTime - startTime
                     Log.i("DisplayPhotoFragment", "${faces.size} faces detected")
                     faces.forEach { it.analyze(photo) }
                     binding?.imageContainer?.children?.last()?.post {
